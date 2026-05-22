@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AeroNetB — Supply Chain Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Industrial Aerospace Theme
+   Palette: Near-black cockpit + signal amber + cool steel
+════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:        #0e1015;
+  --surface:   #13161c;
+  --surface2:  #191c24;
+  --surface3:  #1e2229;
+  --border:    #252930;
+  --border2:   #2e3340;
+  --amber:     #d4901f;
+  --amber-dim: #a86e14;
+  --teal:      #26b5a4;
+  --red:       #c94444;
+  --green:     #2daa7e;
+  --blue:      #4e8fd4;
+  --text:      #d8dae8;
+  --text2:     #7a8298;
+  --text3:     #4a5068;
+  --font-head: 'Sora', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --radius:    4px;
+  --shadow:    0 2px 8px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;font-size:14px;line-height:1.6}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ─── LOGIN ─────────────────────────────────────────────────── */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+}
+.login-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:48px 40px;width:380px;
+  box-shadow:var(--shadow);
+}
+.login-logo{
+  text-align:center;margin-bottom:32px;
+}
+.login-logo .brand{
+  font-size:22px;font-weight:700;letter-spacing:.12em;color:var(--amber);
+  display:block;margin-bottom:4px;
+}
+.login-logo .sub{font-size:12px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.login-box label{display:block;font-size:11px;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;margin-top:18px}
+.login-box input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:10px 14px;border-radius:var(--radius);font-family:var(--font-mono);font-size:13px;
+  outline:none;transition:border-color .2s;
+}
+.login-box input:focus{border-color:var(--amber)}
+.login-box button{
+  width:100%;margin-top:24px;padding:12px;background:var(--amber);color:#000;
+  border:none;border-radius:var(--radius);font-family:var(--font-head);font-weight:700;
+  font-size:13px;letter-spacing:.06em;cursor:pointer;transition:background .2s;
+}
+.login-box button:hover{background:#f7b84a}
+.login-error{margin-top:14px;color:var(--red);font-size:12px;text-align:center;min-height:16px}
+.demo-credentials{
+  margin-top:24px;border-top:1px solid var(--border);padding-top:18px;
+  font-size:11px;color:var(--text3);
+}
+.demo-credentials p{margin-bottom:4px}
+.demo-credentials strong{color:var(--text2)}
+
+/* ─── APP SHELL ─────────────────────────────────────────────── */
+#app{display:none;height:100vh;display:none;flex-direction:row}
+#app.active{display:flex}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────── */
+.sidebar{
+  width:220px;min-width:220px;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  padding:0;overflow:hidden;
+}
+.sidebar-header{
+  padding:24px 20px 20px;border-bottom:1px solid var(--border);
+}
+.sidebar-logo{font-weight:700;font-size:16px;letter-spacing:.1em;color:var(--amber)}
+.sidebar-sub{font-size:10px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-top:2px}
+.user-pill{
+  margin:16px 20px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 12px;
+}
+.user-pill .user-name{font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-pill .user-role{font-size:11px;color:var(--amber);font-family:var(--font-mono);margin-top:1px}
+nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-section{font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:12px 20px 4px}
+nav a{
+  display:flex;align-items:center;gap:10px;padding:9px 20px;color:var(--text2);
+  text-decoration:none;font-size:13px;transition:color .15s,background .15s;cursor:pointer;
+  border-left:2px solid transparent;
+}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--amber);background:var(--surface2);border-left-color:var(--amber)}
+nav a .icon{width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.sidebar-footer{
+  padding:16px 20px;border-top:1px solid var(--border);
+}
+.logout-btn{
+  width:100%;background:transparent;border:1px solid var(--border2);color:var(--text3);
+  padding:8px;border-radius:var(--radius);cursor:pointer;font-family:var(--font-head);
+  font-size:12px;transition:all .2s;
+}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* ─── MAIN CONTENT ──────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
+.topbar{
+  padding:16px 28px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);
+}
+.topbar-title{font-size:17px;font-weight:600;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.page-content{padding:24px 28px;flex:1}
+
+/* ─── CARDS ─────────────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;
+}
+.kpi-card .kpi-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi-card .kpi-value{font-size:26px;font-weight:700;color:var(--text);font-family:var(--font-mono)}
+.kpi-card .kpi-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.kpi-card.accent{border-top:2px solid var(--amber)}
+.kpi-card.teal  {border-top:2px solid var(--teal)}
+.kpi-card.green {border-top:2px solid var(--green)}
+.kpi-card.red   {border-top:2px solid var(--red)}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:20px;overflow:hidden;
+}
+.card-header{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-weight:600;font-size:14px;color:var(--text)}
+.card-body{padding:0}
+
+/* ─── TABLES ────────────────────────────────────────────────── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{
+  font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.06em;padding:10px 16px;text-align:left;
+  border-bottom:1px solid var(--border);background:var(--surface2);
+}
+.data-table td{
+  padding:11px 16px;border-bottom:1px solid var(--border);
+  font-size:13px;color:var(--text2);font-family:var(--font-mono);
+}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface2);color:var(--text)}
+.data-table td.name-col{font-family:var(--font-head);font-weight:500;color:var(--text)}
+
+/* ─── BADGES ────────────────────────────────────────────────── */
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;
+  font-family:var(--font-mono);font-weight:500;letter-spacing:.02em;
+}
+.badge-active, .badge-completed, .badge-operational{background:rgba(52,211,153,.12);color:var(--green)}
+.badge-expired, .badge-offline{background:rgba(240,85,85,.12);color:var(--red)}
+.badge-placed, .badge-maintenance{background:rgba(245,166,35,.12);color:var(--amber)}
+.badge-confirmed, .badge-dispatched{background:rgba(96,165,250,.12);color:var(--blue)}
+.badge-suspended{background:rgba(240,85,85,.08);color:#f08055}
+.badge-pass{background:rgba(52,211,153,.12);color:var(--green)}
+.badge-fail{background:rgba(240,85,85,.12);color:var(--red)}
+
+/* ─── BUTTONS ───────────────────────────────────────────────── */
+.btn{
+  padding:7px 16px;border-radius:var(--radius);font-family:var(--font-head);
+  font-size:12px;font-weight:600;cursor:pointer;border:none;
+  transition:opacity .15s;letter-spacing:.03em;
+}
+.btn:hover{opacity:.8}
+.btn-primary{background:var(--amber);color:#000}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* ─── CHART CONTAINERS ──────────────────────────────────────── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-box h3{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px}
+.chart-box canvas{max-height:220px}
+
+/* ─── FORMS ─────────────────────────────────────────────────── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-group{display:flex;flex-direction:column}
+.form-group label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.form-group input, .form-group select, .form-group textarea{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:var(--radius);font-family:var(--font-mono);font-size:13px;
+  outline:none;transition:border-color .2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus{border-color:var(--amber)}
+.form-group select option{background:var(--surface2)}
+
+/* ─── STATUS BAR ────────────────────────────────────────────── */
+.status-bar{
+  padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;font-size:11px;color:var(--text3);
+  font-family:var(--font-mono);
+}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot.green{background:var(--green)}
+.dot.red{background:var(--red)}
+.dot.amber{background:var(--amber)}
+
+/* ─── LOADING / EMPTY ───────────────────────────────────────── */
+.loading{padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:var(--font-mono)}
+.loading::after{content:'';animation:dots 1.2s infinite;white-space:pre}
+@keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+.empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
+
+/* ─── MODAL ─────────────────────────────────────────────────── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:100;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:28px;width:520px;max-width:90vw;max-height:85vh;overflow-y:auto;
+  box-shadow:var(--shadow);
+}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--text)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:16px}
+
+/* ─── ALERT BADGE ───────────────────────────────────────────── */
+.alert-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(240,85,85,.12);color:var(--red);
+  border:1px solid rgba(240,85,85,.3);border-radius:3px;
+  padding:2px 8px;font-size:11px;font-family:var(--font-mono);
+}
+
+/* ─── IOT GAUGE CARD ────────────────────────────────────────── */
+.iot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.iot-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px 20px;
+}
+.iot-card .iot-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.iot-card .iot-value{font-size:28px;font-weight:700;font-family:var(--font-mono);margin:4px 0;color:var(--teal)}
+.iot-card .iot-unit{font-size:12px;color:var(--text3)}
+.iot-card.alert{border-color:var(--red);background:rgba(240,85,85,.04)}
+.iot-card.alert .iot-value{color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ LOGIN SCREEN ════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="brand">AERONETB</span>
+      <span class="sub">Supply Chain Dashboard</span>
+    </div>
+    <label for="l-email">Email Address</label>
+    <input type="email" id="l-email" placeholder="name@aeronetb.com" autocomplete="username"/>
+    <label for="l-pass">Password</label>
+    <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"/>
+    <button onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+
+  </div>
+</div>
+
+<!-- ════════════════════ APP SHELL ═══════════════════════════ -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">AERONETB</div>
+      <div class="sidebar-sub">Operations Platform</div>
+    </div>
+    <div class="user-pill">
+      <div class="user-name" id="sb-name">—</div>
+      <div class="user-role" id="sb-role">—</div>
+    </div>
+    <nav id="main-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-right">
+        <span id="clock" style="font-family:var(--font-mono);font-size:12px;color:var(--text3)"></span>
+      </div>
+    </div>
+    <div class="page-content" id="page-content">
+      <div class="loading">Loading</div>
+    </div>
+    <div class="status-bar">
+      <span id="status-pg"><span class="dot amber"></span>PostgreSQL</span>
+      <span id="status-mg"><span class="dot amber"></span>MongoDB</span>
+      <span id="status-user" style="margin-left:auto"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ MODALS ══════════════════════════════ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
+const API = '/api';
+let state = { token: null, user: null, page: null };
+
+function authHeaders() {
+  return { 'Content-Type':'application/json', 'Authorization':'Bearer '+state.token };
+}
+
+async function apiFetch(path, opts={}) {
+  const res = await fetch(API+path, { headers: authHeaders(), ...opts });
+  if (res.status === 401) { doLogout(); throw new Error('Unauthorised'); }
+  if (res.status === 204) return null;  // no-content responses
+  let data = null;
+  try { data = await res.json(); } catch(_) {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return null;
+  }
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════════════════════════ */
+setInterval(()=>{
+  const el = document.getElementById('clock');
+  if (el) el.textContent =
+    new Date().toLocaleString('el-GR',{hour:'2-digit',minute:'2-digit',second:'2-digit',
+      day:'2-digit',month:'2-digit',year:'numeric'});
+},1000);
+
+/* ══════════════════════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════════════════════ */
+async function doLogin() {
+  const email    = document.getElementById('l-email').value.trim();
+  const password = document.getElementById('l-pass').value;
+  document.getElementById('login-error').textContent = '';
+  try {
+    const res  = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    let data = {};
+    try { data = await res.json(); } catch(_) { throw new Error('Server returned an unexpected response. Is the server running?'); }
+    if (!res.ok || !data.token) throw new Error(data.error || 'Login failed');
+    state.token = data.token;
+    state.user  = data.user;
+    showApp();
+  } catch(e) {
+    document.getElementById('login-error').textContent = e.message;
+  }
+}
+
+document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  state = {token:null,user:null,page:null};
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-error').textContent='';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NAV BUILD — role-specific
+══════════════════════════════════════════════════════════════ */
+const NAV_ITEMS = {
+  ProcurementOfficer: [
+    {id:'dashboard',  icon:'', label:'Overview'},
+    {id:'suppliers',  icon:'', label:'Suppliers'},
+    {id:'parts',      icon:'', label:'Parts Catalogue'},
+    {id:'orders',     icon:'', label:'Purchase Orders'},
+    {id:'shipments',  icon:'', label:'Shipments'},
+  ],
+  QualityInspector: [
+    {id:'dashboard',       icon:'', label:'Overview'},
+    {id:'qcreports',       icon:'', label:'QC Reports'},
+    {id:'certifications',  icon:'', label:'Certifications'},
+    {id:'orders',          icon:'', label:'Orders (Read)'},
+  ],
+  SupplyChainManager: [
+    {id:'dashboard',       icon:'', label:'Overview'},
+    {id:'kpis',            icon:'', label:'Supplier KPIs'},
+    {id:'orders',          icon:'', label:'Orders'},
+    {id:'shipments',       icon:'', label:'Shipments'},
+    {id:'qcreports',       icon:'', label:'QC Reports'},
+  ],
+  EquipmentEngineer: [
+    {id:'dashboard',  icon:'', label:'Overview'},
+    {id:'equipment',  icon:'', label:'Equipment'},
+    {id:'iot',        icon:'', label:'IoT Monitor'},
+  ],
+  Auditor: [
+    {id:'dashboard',       icon:'', label:'Overview'},
+    {id:'certifications',  icon:'', label:'Certifications'},
+    {id:'audit',           icon:'', label:'Audit Log'},
+    {id:'qcreports',       icon:'', label:'QC Reports'},
+  ]
+};
+
+function buildNav() {
+  const role  = state.user.roles[0] || 'Auditor';
+  const items = NAV_ITEMS[role] || NAV_ITEMS.Auditor;
+  const nav   = document.getElementById('main-nav');
+  nav.innerHTML = '';
+  const section = document.createElement('div');
+  section.className = 'nav-section';
+  section.textContent = 'Navigation';
+  nav.appendChild(section);
+  items.forEach(item => {
+    const a = document.createElement('a');
+    a.innerHTML = `<span class="icon">${item.icon}</span>${item.label}`;
+    a.dataset.page = item.id;
+    a.onclick = () => navigate(item.id);
+    nav.appendChild(a);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   APP INIT
+══════════════════════════════════════════════════════════════ */
+function showApp() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('sb-name').textContent  = state.user.fullName;
+  document.getElementById('sb-role').textContent  = state.user.roles.join(', ');
+  document.getElementById('status-user').textContent = state.user.email;
+  buildNav();
+  navigate('dashboard');
+  // Check connectivity
+  apiFetch('/health').then(d => {
+    const pg = document.querySelector('#status-pg .dot');
+    if (pg) { pg.className='dot green'; }
+  }).catch(()=>{});
+  apiFetch('/dashboard/qc-summary').then(() => {
+    const mg = document.querySelector('#status-mg .dot');
+    if (mg) { mg.className='dot green'; }
+  }).catch(()=>{
+    const mg = document.querySelector('#status-mg .dot');
+    if (mg) { mg.className='dot red'; }
+  });
+}
+
+function navigate(page) {
+  state.page = page;
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('active', a.dataset.page===page));
+  const titles = {
+    dashboard:'Overview', suppliers:'Suppliers', parts:'Parts Catalogue',
+    orders:'Purchase Orders', shipments:'Shipments', qcreports:'QC Reports',
+    certifications:'Certifications', equipment:'Equipment', iot:'IoT Monitor',
+    kpis:'Supplier KPIs', audit:'Audit Log'
+  };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  renderPage(page);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE ROUTER
+══════════════════════════════════════════════════════════════ */
+async function renderPage(page) {
+  const el = document.getElementById('page-content');
+  el.innerHTML = '<div class="loading">Loading</div>';
+  try {
+    switch(page) {
+      case 'dashboard':     await renderDashboard(el);     break;
+      case 'suppliers':     await renderSuppliers(el);     break;
+      case 'parts':         await renderParts(el);         break;
+      case 'orders':        await renderOrders(el);        break;
+      case 'shipments':     await renderShipments(el);     break;
+      case 'qcreports':     await renderQCReports(el);     break;
+      case 'certifications':await renderCertifications(el);break;
+      case 'equipment':     await renderEquipment(el);     break;
+      case 'iot':           await renderIoT(el);           break;
+      case 'kpis':          await renderKPIs(el);          break;
+      case 'audit':         await renderAudit(el);         break;
+      default: el.innerHTML='<div class="empty">Page not found.</div>';
+    }
+  } catch(e) {
+    el.innerHTML = `<div class="empty" style="color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   DASHBOARD OVERVIEW
+────────────────────────────────────────────────────────────── */
+async function renderDashboard(el) {
+  const [statusData, activity] = await Promise.all([
+    apiFetch('/dashboard/orders-by-status'),
+    apiFetch('/dashboard/recent-activity')
+  ]);
+
+  const statusMap = {};
+  statusData.forEach(r => statusMap[r.status] = parseInt(r.count));
+  const totalOrders = Object.values(statusMap).reduce((a,b)=>a+b,0);
+
+  el.innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi-card accent">
+        <div class="kpi-label">Total Orders</div>
+        <div class="kpi-value">${totalOrders}</div>
+        <div class="kpi-sub">All time</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-label">Active</div>
+        <div class="kpi-value">${(statusMap.placed||0)+(statusMap.confirmed||0)+(statusMap.dispatched||0)}</div>
+        <div class="kpi-sub">Placed + Confirmed + Dispatched</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Completed</div>
+        <div class="kpi-value">${statusMap.completed||0}</div>
+        <div class="kpi-sub">Delivered & closed</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Delivered</div>
+        <div class="kpi-value">${statusMap.delivered||0}</div>
+        <div class="kpi-sub">Awaiting closure</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Orders by Status</h3>
+        <canvas id="chart-status"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Recent Activity</h3>
+        <canvas id="chart-activity"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Activity Log</span>
+      </div>
+      <table class="data-table">
+        <thead><tr>
+          <th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Record</th>
+        </tr></thead>
+        <tbody>${activity.map(r=>`
+          <tr>
+            <td>${new Date(r.timestamp).toLocaleString('el-GR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</td>
+            <td class="name-col">${r.employee_name}</td>
+            <td>${badge(r.action_type,'action')}</td>
+            <td>${r.entity_type}</td>
+            <td>${r.entity_id||'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  // Orders by status doughnut
+  new Chart(document.getElementById('chart-status'), {
+    type:'doughnut',
+    data:{
+      labels: statusData.map(r=>r.status),
+      datasets:[{ data: statusData.map(r=>parseInt(r.count)),
+        backgroundColor:['#f5a623','#60a5fa','#2dd4bf','#34d399','#f05555'],
+        borderColor:'#1c2030', borderWidth:2 }]
+    },
+    options:{ plugins:{ legend:{ labels:{ color:'#8e97b8', font:{size:12} } } }, cutout:'65%' }
+  });
+
+  // Activity bar chart
+  const actionCounts = {};
+  activity.forEach(r => { actionCounts[r.action_type] = (actionCounts[r.action_type]||0)+1; });
+  new Chart(document.getElementById('chart-activity'), {
+    type:'bar',
+    data:{
+      labels: Object.keys(actionCounts),
+      datasets:[{ label:'Count', data: Object.values(actionCounts),
+        backgroundColor:'rgba(245,166,35,.6)', borderColor:'#f5a623', borderWidth:1, borderRadius:4 }]
+    },
+    options:{ plugins:{ legend:{display:false} },
+      scales:{ x:{ ticks:{color:'#8e97b8'}, grid:{color:'#2a2f45'} },
+               y:{ ticks:{color:'#8e97b8'}, grid:{color:'#2a2f45'} } } }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   SUPPLIERS
+────────────────────────────────────────────────────────────── */
+async function renderSuppliers(el) {
+  const suppliers = await apiFetch('/suppliers');
+  const canWrite  = state.user.roles.includes('ProcurementOfficer');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      ${canWrite ? `<button class="btn btn-primary" onclick="openNewSupplierModal()">+ Add Supplier</button>` : ''}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">All Suppliers (${suppliers.length})</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th><th>Business Name</th><th>Country</th><th>Email</th>
+          <th>Accreditations</th><th>Active Cert</th>
+        </tr></thead>
+        <tbody>${suppliers.map(s=>`
+          <tr>
+            <td>${s.supplier_id}</td>
+            <td class="name-col">${s.business_name}</td>
+            <td>${s.country}</td>
+            <td>${s.email||'—'}</td>
+            <td>${s.accreditation_count}</td>
+            <td>${s.has_active_cert
+              ? '<span class="badge badge-active">✓ Valid</span>'
+              : '<span class="badge badge-expired">✗ None</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function openNewSupplierModal() {
+  openModal(`
+    <h2>Add New Supplier</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Business Name *</label><input id="sn-name" placeholder="Titan Aerospace..."/></div>
+      <div class="form-group"><label>Country *</label><input id="sn-country" placeholder="France"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>City</label><input id="sn-city"/></div>
+      <div class="form-group"><label>Email</label><input id="sn-email" type="email"/></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px"><label>Address</label><input id="sn-addr"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewSupplier()">Create Supplier</button>
+    </div>`);
+}
+
+async function submitNewSupplier() {
+  try {
+    await apiFetch('/suppliers',{
+      method:'POST',
+      body: JSON.stringify({
+        business_name: document.getElementById('sn-name').value,
+        country: document.getElementById('sn-country').value,
+        city: document.getElementById('sn-city').value,
+        email: document.getElementById('sn-email').value,
+        address_line1: document.getElementById('sn-addr').value
+      })
+    });
+    closeModal(); navigate('suppliers');
+  } catch(e) { alert(e.message); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   PARTS
+────────────────────────────────────────────────────────────── */
+async function renderParts(el) {
+  const parts = await apiFetch('/parts');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Parts Catalogue (${parts.length})</span></div>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Part Name</th><th>Category</th><th>Suppliers</th><th>Min Price</th><th>Max Price</th></tr></thead>
+        <tbody>${parts.map(p=>`
+          <tr>
+            <td>${p.part_id}</td>
+            <td class="name-col">${p.part_name}</td>
+            <td>${p.category||'—'}</td>
+            <td>${p.supplier_count}</td>
+            <td>${p.min_price ? 'EUR '+Number(p.min_price).toLocaleString() : '—'}</td>
+            <td>${p.max_price ? 'EUR '+Number(p.max_price).toLocaleString() : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ORDERS
+────────────────────────────────────────────────────────────── */
+async function renderOrders(el) {
+  const orders   = await apiFetch('/orders');
+  const canWrite = state.user.roles.some(r => r === 'ProcurementOfficer');
+  const statuses = ['placed','confirmed','dispatched','delivered','completed'];
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      ${canWrite ? `<button class="btn btn-primary" onclick="openNewOrderModal()">+ New Order</button>`:''}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Purchase Orders (${orders.length})</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>PO#</th><th>Supplier</th><th>Date</th><th>Status</th>
+          <th>Items</th><th>Total Value</th>${canWrite ? '<th>Action</th>' : ''}
+        </tr></thead>
+        <tbody>${orders.map(o => {
+          const opts = statuses.filter(s => s !== o.status);
+          const actionCell = canWrite
+            ? `<td>${o.status !== 'completed'
+                ? `<select data-order="${o.order_id}"
+                     style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);
+                     border-radius:var(--radius);font-size:11px;padding:3px 8px;cursor:pointer;outline:none">
+                     <option value="">Update status...</option>
+                     ${opts.map(s=>`<option value="${s}">${s}</option>`).join('')}
+                   </select>`
+                : '—'}</td>`
+            : '';
+          return `<tr>
+            <td>${o.order_id}</td>
+            <td class="name-col">${o.supplier_name}</td>
+            <td>${fmtDate(o.order_date)}</td>
+            <td>${badge(o.status,'status')}</td>
+            <td>${o.item_count}</td>
+            <td>${o.total_value ? 'EUR '+Number(o.total_value).toLocaleString('el-GR',{minimumFractionDigits:0}) : '—'}</td>
+            ${actionCell}
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  // Attach listeners after DOM is set
+  el.querySelectorAll('select[data-order]').forEach(sel => {
+    sel.addEventListener('change', async function() {
+      const orderId = this.dataset.order;
+      const status  = this.value;
+      if (!status) return;
+      this.disabled = true;
+      try {
+        await apiFetch(`/orders/${orderId}/status`, {method:'PUT', body:JSON.stringify({status})});
+        navigate('orders');
+      } catch(e) {
+        alert(e.message);
+        this.disabled = false;
+        this.selectedIndex = 0;
+      }
+    });
+  });
+}
+
+async function updateOrderStatus(orderId, status) {
+  if (!status) return;
+  try {
+    await apiFetch(`/orders/${orderId}/status`,{method:'PUT',body:JSON.stringify({status})});
+    navigate('orders');
+  } catch(e){ alert(e.message); }
+}
+
+async function openNewOrderModal() {
+  try {
+    const [suppliers, parts] = await Promise.all([apiFetch('/suppliers'), apiFetch('/parts')]);
+    openModal(`
+      <h2>Create Purchase Order</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Supplier *</label>
+          <select id="no-supplier">
+            <option value="">Select...</option>
+            ${suppliers.map(s=>`<option value="${s.supplier_id}">${s.business_name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Desired Delivery</label>
+          <input type="date" id="no-date"/>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Part *</label>
+        <select id="no-part">
+          <option value="">Select...</option>
+          ${parts.map(p=>`<option value="${p.part_id}">${p.part_name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Quantity *</label><input type="number" id="no-qty" min="1" value="1"/></div>
+        <div class="form-group"><label>Unit Price (EUR) *</label><input type="number" id="no-price" step="0.01" min="0"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewOrder()">Place Order</button>
+      </div>`);
+  } catch(e) { alert('Failed to load form data: ' + e.message); }
+}
+
+async function submitNewOrder() {
+  try {
+    await apiFetch('/orders',{method:'POST', body:JSON.stringify({
+      supplier_id:          parseInt(document.getElementById('no-supplier').value),
+      desired_delivery_date: document.getElementById('no-date').value || null,
+      items:[{ part_id:    parseInt(document.getElementById('no-part').value),
+               quantity:   parseInt(document.getElementById('no-qty').value),
+               unit_price: parseFloat(document.getElementById('no-price').value) }]
+    })});
+    closeModal(); navigate('orders');
+  } catch(e){ alert(e.message); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   SHIPMENTS
+────────────────────────────────────────────────────────────── */
+async function renderShipments(el) {
+  const shipments = await apiFetch('/shipments');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Active Shipments (${shipments.length})</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>ID</th><th>Tracking #</th><th>Carrier</th><th>Supplier</th>
+          <th>Ship Date</th><th>ETA</th><th>Last Status</th>
+        </tr></thead>
+        <tbody>${shipments.map(s=>`
+          <tr>
+            <td>${s.shipment_id}</td>
+            <td>${s.tracking_number||'—'}</td>
+            <td class="name-col">${s.carrier||'—'}</td>
+            <td>${s.supplier_name}</td>
+            <td>${fmtDate(s.ship_date)}</td>
+            <td>${fmtDate(s.estimated_arrival)}</td>
+            <td>${s.tracking ? s.tracking.latest_status : '<span style="color:var(--text3)">No updates</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   QC REPORTS
+────────────────────────────────────────────────────────────── */
+async function renderQCReports(el) {
+  const reports  = await apiFetch('/qcreports');
+  const canWrite = state.user.roles.includes('QualityInspector');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      ${canWrite ? `<button class="btn btn-primary" onclick="openNewQCModal()">+ New Report</button>`:''}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">QC Reports (${reports.length})</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>Report ID</th><th>Type</th><th>Date</th><th>Result</th>
+          <th>Version</th><th>Status</th><th>Action</th>
+        </tr></thead>
+        <tbody>${reports.length ? reports.map(r=>`
+          <tr>
+            <td>${r.report_id}</td>
+            <td>${r.report_type}</td>
+            <td>${fmtDate(r.inspection_date)}</td>
+            <td>${badge(r.overall_result,'qc')}</td>
+            <td>v${r.version}</td>
+            <td>${r.is_immutable
+              ? '<span class="badge badge-completed">Approved</span>'
+              : '<span class="badge badge-placed">Draft</span>'}</td>
+            <td>${canWrite && !r.is_immutable
+              ? `<button class="btn btn-secondary btn-sm" onclick="approveReport('${r.report_id}')">Approve</button>`
+              : '—'}</td>
+          </tr>`).join('') : `<tr><td colspan="7" style="text-align:center;color:var(--text3)">No reports yet.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function approveReport(reportId) {
+  if (!confirm(`Approve report ${reportId}? This is irreversible.`)) return;
+  try {
+    await apiFetch(`/qcreports/${reportId}/approve`,{method:'POST'});
+    navigate('qcreports');
+  } catch(e){ alert(e.message); }
+}
+
+function openNewQCModal() {
+  openModal(`
+    <h2>New QC Report</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Order Item ID *</label>
+        <input type="number" id="qc-oi" placeholder="1"/>
+      </div>
+      <div class="form-group">
+        <label>Report Type *</label>
+        <select id="qc-type">
+          <option value="visual">Visual</option>
+          <option value="dimensional">Dimensional</option>
+          <option value="ndt">NDT</option>
+          <option value="environmental">Environmental</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Overall Result *</label>
+        <select id="qc-result">
+          <option value="Pass">Pass</option>
+          <option value="Fail">Fail</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Inspection Date</label>
+        <input type="date" id="qc-date"/>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Comments</label>
+      <textarea id="qc-comments" style="height:80px;resize:vertical"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitQCReport()">Submit Report</button>
+    </div>`);
+}
+
+async function submitQCReport() {
+  try {
+    await apiFetch('/qcreports',{method:'POST', body:JSON.stringify({
+      order_item_id:  parseInt(document.getElementById('qc-oi').value),
+      report_type:    document.getElementById('qc-type').value,
+      overall_result: document.getElementById('qc-result').value,
+      inspection_date:document.getElementById('qc-date').value||null,
+      comments:       document.getElementById('qc-comments').value
+    })});
+    closeModal(); navigate('qcreports');
+  } catch(e){ alert(e.message); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   CERTIFICATIONS
+────────────────────────────────────────────────────────────── */
+async function renderCertifications(el) {
+  const certs = await apiFetch('/certifications');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Component Certifications (${certs.length})</span></div>
+      ${certs.length ? `
+      <table class="data-table">
+        <thead><tr>
+          <th>Cert ID</th><th>Part ID</th><th>Supplier ID</th><th>Date</th><th>Status</th><th>Immutable</th>
+        </tr></thead>
+        <tbody>${certs.map(c=>`
+          <tr>
+            <td>${c.certification_id}</td>
+            <td>${c.part_id}</td>
+            <td>${c.supplier_id}</td>
+            <td>${fmtDate(c.certification_date)}</td>
+            <td>${badge(c.status,'cert')}</td>
+            <td>${c.is_immutable?'Locked':'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="empty">No certifications found. They are created through QC workflows.</div>'}
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   EQUIPMENT
+────────────────────────────────────────────────────────────── */
+async function renderEquipment(el) {
+  const eq      = await apiFetch('/equipment');
+  const canWrite = state.user.roles.includes('EquipmentEngineer');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Equipment (${eq.length})</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>ID</th><th>Name</th><th>Type</th><th>Facility</th>
+          <th>Installed</th><th>Status</th>
+          ${canWrite?'<th>Update</th>':''}
+        </tr></thead>
+        <tbody>${eq.map(e=>`
+          <tr>
+            <td>${e.equipment_id}</td>
+            <td class="name-col">${e.equipment_name}</td>
+            <td>${e.equipment_type||'—'}</td>
+            <td>${e.facility||'—'}</td>
+            <td>${fmtDate(e.installation_date)}</td>
+            <td>${badge(e.status,'equip')}</td>
+            ${canWrite?`<td>
+              <select class="btn btn-secondary btn-sm" onchange="updateEquipStatus(${e.equipment_id},this.value)" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:3px;font-size:11px;padding:3px 6px">
+                <option value="">Change…</option>
+                ${['Operational','Maintenance','Offline'].filter(s=>s!==e.status)
+                  .map(s=>`<option value="${s}">${s}</option>`).join('')}
+              </select></td>` : ''}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function updateEquipStatus(id, status) {
+  if (!status) return;
+  try {
+    await apiFetch(`/equipment/${id}/status`,{method:'PUT',body:JSON.stringify({status})});
+    navigate('equipment');
+  } catch(e){ alert(e.message); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   IOT MONITOR
+────────────────────────────────────────────────────────────── */
+async function renderIoT(el) {
+  const equipment = await apiFetch('/equipment');
+  el.innerHTML = `
+    <p style="color:var(--text3);font-size:12px;margin-bottom:18px;font-family:var(--font-mono)">
+      Live IoT sensor readings — click equipment to fetch latest telemetry
+    </p>
+    <div class="iot-grid" id="iot-grid">
+      ${equipment.map(e=>`
+        <div class="iot-card" style="cursor:pointer" onclick="fetchIoT(${e.equipment_id},'iot-data-${e.equipment_id}')">
+          <div class="iot-label">${e.equipment_name}</div>
+          <div class="iot-value" id="iot-data-${e.equipment_id}" style="font-size:14px;color:var(--text2);margin-top:8px">
+            Click to load
+          </div>
+          <div class="iot-unit">${e.facility||''} · ${badge(e.status,'equip')}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function fetchIoT(equipId, targetId) {
+  const el = document.getElementById(targetId);
+  el.textContent = 'Loading…';
+  try {
+    const data = await apiFetch(`/iot/${equipId}/latest`);
+    const r = data.readings || {};
+    el.innerHTML = `
+      <span style="color:var(--teal)">${r.temperature??'—'}°C</span>
+      <span style="color:var(--text3);font-size:11px;margin:0 6px">|</span>
+      <span style="color:var(--blue)">${r.vibration??'—'} mm/s</span>
+      <span style="color:var(--text3);font-size:11px;margin:0 6px">|</span>
+      <span style="color:var(--amber)">${r.pressure??'—'} PSI</span>
+      ${data.alerts&&data.alerts.length
+        ? `<br><span class="alert-badge">${data.alerts.length} alert${data.alerts.length>1?'s':''}</span>`:''}
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--font-mono)">${new Date(data.timestamp).toLocaleString('el-GR')}</div>`;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--text3);font-size:12px">No data yet</span>`;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   SUPPLIER KPIs
+────────────────────────────────────────────────────────────── */
+async function renderKPIs(el) {
+  const kpis = await apiFetch('/dashboard/kpis');
+  el.innerHTML = `
+    <div class="chart-grid" style="margin-bottom:20px">
+      <div class="chart-box">
+        <h3>On-Time Delivery Rate (%)</h3>
+        <canvas id="chart-kpi-ontime"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Total Orders per Supplier</h3>
+        <canvas id="chart-kpi-orders"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Supplier Performance Table</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>Supplier</th><th>Total Orders</th><th>Completed</th>
+          <th>On-Time %</th><th>Avg Lead (days)</th><th>Active</th>
+        </tr></thead>
+        <tbody>${kpis.map(k=>`
+          <tr>
+            <td class="name-col">${k.business_name}</td>
+            <td>${k.total_orders}</td>
+            <td>${k.completed_orders}</td>
+            <td>${k.on_time_pct!=null
+              ? `<span style="color:${k.on_time_pct>=80?'var(--green)':k.on_time_pct>=50?'var(--amber)':'var(--red)'}">${k.on_time_pct}%</span>`
+              : '—'}</td>
+            <td>${k.avg_delivery_days||'—'}</td>
+            <td>${k.active_orders}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  const names = kpis.map(k=>k.business_name.split(' ')[0]);
+  new Chart(document.getElementById('chart-kpi-ontime'),{
+    type:'bar',
+    data:{ labels:names, datasets:[{label:'On-Time %',
+      data:kpis.map(k=>parseFloat(k.on_time_pct)||0),
+      backgroundColor:kpis.map(k=>{const p=parseFloat(k.on_time_pct)||0;return p>=80?'rgba(52,211,153,.7)':p>=50?'rgba(245,166,35,.7)':'rgba(240,85,85,.7)'}),
+      borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8e97b8'},grid:{color:'#2a2f45'}},y:{max:100,ticks:{color:'#8e97b8'},grid:{color:'#2a2f45'}}}}
+  });
+  new Chart(document.getElementById('chart-kpi-orders'),{
+    type:'bar',
+    data:{ labels:names, datasets:[{label:'Orders',
+      data:kpis.map(k=>parseInt(k.total_orders)),
+      backgroundColor:'rgba(96,165,250,.6)',borderColor:'#60a5fa',borderWidth:1,borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8e97b8'},grid:{color:'#2a2f45'}},y:{ticks:{color:'#8e97b8'},grid:{color:'#2a2f45'}}}}
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   AUDIT LOG
+────────────────────────────────────────────────────────────── */
+async function renderAudit(el) {
+  const logs = await apiFetch('/audit?limit=50');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Audit Log — Last 50 Entries (Read-Only)</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th>Log ID</th><th>Timestamp</th><th>User</th><th>Action</th>
+          <th>Entity</th><th>Record ID</th>
+        </tr></thead>
+        <tbody>${logs.map(l=>`
+          <tr>
+            <td>${l.log_id}</td>
+            <td>${new Date(l.timestamp).toLocaleString('el-GR',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'2-digit'})}</td>
+            <td class="name-col">${l.employee_name}</td>
+            <td>${badge(l.action_type,'action')}</td>
+            <td>${l.entity_type}</td>
+            <td>${l.entity_id||'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════ */
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+function badge(val, type) {
+  if (!val) return '—';
+  const v = val.toLowerCase();
+  const cls = {
+    // status
+    placed:'placed', confirmed:'confirmed', dispatched:'confirmed', delivered:'active', completed:'completed',
+    // qc
+    pass:'pass', fail:'fail',
+    // equipment
+    operational:'active', maintenance:'placed', offline:'expired',
+    // accreditation
+    active:'active', expired:'expired', suspended:'suspended',
+    // action
+    view:'confirmed', create:'active', update:'placed', delete:'fail', approve:'completed',
+    // cert
+    revoked:'fail'
+  }[v] || 'placed';
+  return `<span class="badge badge-${cls}">${val}</span>`;
+}
+
+function openModal(html) {
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+</script>
+</body>
+</html>
